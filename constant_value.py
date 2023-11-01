@@ -1,6 +1,5 @@
 #Declare all constant variable using in this project |
 #----------------------------------------------------/
-
 #Game Display Window
 s_display_W = 600
 s_display_H = 700
@@ -83,3 +82,5 @@ s_food_path = r'./Resources/Character/Food/food.png'
 
 #Monster
 s_character_monster = r'./Resources/Character/Monster/monster.png'
+
+#Lv3 

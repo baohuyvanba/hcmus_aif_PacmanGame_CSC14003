@@ -123,3 +123,6 @@ class Monster():
             self.direction = s_direction_R
         elif togo_pos[0] - self.co_or_pos[0] == -1:  # Move Left
             self.direction = s_direction_L
+
+    def monster_disappear(self):
+        pygame.display.update(self.app.screen.blit(self.blank_space, self.pixel_pos))

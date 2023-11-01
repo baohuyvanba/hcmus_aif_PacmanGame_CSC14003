@@ -37,6 +37,7 @@ def astar_search(graph, pacman, food):
             elif visited[child_state] == node_Frontier:                                         #Nếu đã ở trong Frontier: cập nhập lại pathcost
                 update(frontier, (node[0] - h_state + 1 + h_child_state, child_state, node[1]))
 
+    print("return none?")
     return None
 
 def pathway(explored):
