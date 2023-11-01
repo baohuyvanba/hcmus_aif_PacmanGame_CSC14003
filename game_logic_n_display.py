@@ -10,6 +10,7 @@ import astar_search as astar
 import agent as ag
 from constant_value import *
 import random
+import math
 
 class GameState_lv4:
     def __init__(self,pacman_pos, foods_pos, monsters_pos, points):
@@ -606,86 +607,87 @@ class pacman_game:
         self.stage = s_display_f_vic
 
     # Level 4
-    def heuristic_lv4_around(self,graph_map,position,foods_pos,pre_pos,monster_pos):
-        heu = 0
-        if position in foods_pos:
-            heu+=2
-        if position in monster_pos:
-            heu -= 30
-        for pos in graph_map[position]:
-            if pos in pre_pos:
-                continue
-            if pos in foods_pos and pos not in pre_pos:
-                pre_pos.append(pos)
-                heu+=2
-            elif pos in monster_pos:
-                heu-=15
+    # def heuristic_lv4_around(self,graph_map,position,foods_pos,pre_pos,monster_pos):
+    #     heu = 0
+    #     if position in foods_pos:
+    #         heu+=2
+    #     if position in monster_pos:
+    #         heu -= 30
+    #     for pos in graph_map[position]:
+    #         if pos in pre_pos:
+    #             continue
+    #         if pos in foods_pos and pos not in pre_pos:
+    #             pre_pos.append(pos)
+    #             heu+=2
+    #         elif pos in monster_pos:
+    #             heu-=15
 
-        return heu
+    #     return heu
 
-    def heuristic_lv4_2around(self,pacman_pos,graph_map,position,foods_pos,monster_pos):
-        heu = 0
-        if position in foods_pos:
-            heu+=2
-        if position in monster_pos:
-            heu -= 50
-        pre_pos = []
-        pre_pos.append(position)
-        pre_pos.append(pacman_pos)
-        for pos in graph_map[position]: 
-            if pos == pacman_pos:
-                continue
-            heu = heu + self.heuristic_lv4_around(graph_map,pos,foods_pos,pre_pos,monster_pos)
-        return heu  
+    # def heuristic_lv4_2around(self,pacman_pos,graph_map,position,foods_pos,monster_pos):
+    #     heu = 0
+    #     if position in foods_pos:
+    #         heu+=2
+    #     if position in monster_pos:
+    #         heu -= 50
+    #     pre_pos = []
+    #     pre_pos.append(position)
+    #     pre_pos.append(pacman_pos)
+    #     for pos in graph_map[position]: 
+    #         if pos == pacman_pos:
+    #             continue
+    #         heu = heu + self.heuristic_lv4_around(graph_map,pos,foods_pos,pre_pos,monster_pos)
+    #     return heu  
     
     def heuristic(self, state, goal):  #Diagonal
-        dx = abs(state[0] - goal[0])
-        dy = abs(state[1] - goal[1])
-        return dx + dy - min(dx, dy)
+        # dx = abs(state[0] - goal[0])
+        # dy = abs(state[1] - goal[1])
+        # return dx + dy - min(dx, dy)
+        return math.sqrt(abs(state[0] - goal[0])**2 + abs(state[1] - goal[1])**2)
     
-    def isValid(self,position,graph_map,monster_list):
-        if (0<position[0]<30 and 0<position[1]<28 and ((position in graph_map) or (position in monster_list))):
-            return True
-        else:
-            return False
+    # def isValid(self,position,graph_map,monster_list):
+    #     if (0<position[0]<30 and 0<position[1]<28 and ((position in graph_map) or (position in monster_list))):
+    #         return True
+    #     else:
+    #         return False
 
-    def heuristic_lv4_monster(self,position,graph_map,monster_list,pacman_pos,time_monster):
-        heu = {}
-        p1 = (position[0],position[1]-1) #Left
-        p2 = (position[0]-1,position[1]) #Up
-        p3 = (position[0],position[1]+1) #Right
-        p4 = (position[0]+1,position[1]) #Down
-        # print(p1,p2,p3,p4)
-        if (self.isValid(p1,graph_map,monster_list)):
-            if p1 not in time_monster:
-                time_monster[p1] = 0
-            heu[p1] = time_monster[p1]*1 + self.heuristic(p1,pacman_pos)
-        else:
-            heu[p1] = 10000
+    # def heuristic_lv4_monster(self,position,graph_map,monster_list,pacman_pos,time_monster):
+    #     heu = {}
+    #     p1 = (position[0],position[1]-1) #Left
+    #     p2 = (position[0]-1,position[1]) #Up
+    #     p3 = (position[0],position[1]+1) #Right
+    #     p4 = (position[0]+1,position[1]) #Down
+    #     # print(p1,p2,p3,p4)
+    #     if (self.isValid(p1,graph_map,monster_list)):
+    #         if p1 not in time_monster:
+    #             time_monster[p1] = 0
+    #         heu[p1] = time_monster[p1]*1 + self.heuristic(p1,pacman_pos)
+    #     else:
+    #         heu[p1] = 10000
 
-        if (self.isValid(p2,graph_map,monster_list)):
-            if p2 not in time_monster:
-                time_monster[p2] = 0
-            heu[p2] =time_monster[p2]*1 + self.heuristic(p2,pacman_pos)
-        else:
-            heu[p2] = 10000
+    #     if (self.isValid(p2,graph_map,monster_list)):
+    #         if p2 not in time_monster:
+    #             time_monster[p2] = 0
+    #         heu[p2] =time_monster[p2]*1 + self.heuristic(p2,pacman_pos)
+    #     else:
+    #         heu[p2] = 10000
 
-        if (self.isValid(p3,graph_map,monster_list)):
-            if p3 not in time_monster:
-                time_monster[p3] = 0
-            heu[p3] =time_monster[p3]*1 + self.heuristic(p3,pacman_pos)
-        else:
-            heu[p3] = 10000
+    #     if (self.isValid(p3,graph_map,monster_list)):
+    #         if p3 not in time_monster:
+    #             time_monster[p3] = 0
+    #         heu[p3] =time_monster[p3]*1 + self.heuristic(p3,pacman_pos)
+    #     else:
+    #         heu[p3] = 10000
 
-        if (self.isValid(p4,graph_map,monster_list)):
-            if p4 not in time_monster:
-                time_monster[p4] = 0
-            heu[p4] =time_monster[p4]*1 + self.heuristic(p4,pacman_pos)
-        else:
-            heu[p4] = 10000
+    #     if (self.isValid(p4,graph_map,monster_list)):
+    #         if p4 not in time_monster:
+    #             time_monster[p4] = 0
+    #         heu[p4] =time_monster[p4]*1 + self.heuristic(p4,pacman_pos)
+    #     else:
+    #         heu[p4] = 10000
         
-        heu = dict(sorted(heu.items(), key=lambda item: item[1],reverse=False))
-        return heu
+    #     heu = dict(sorted(heu.items(), key=lambda item: item[1],reverse=False))
+    #     return heu
 
     #Function for level4 (Minimax or something like this)
     def evaluation_function(self,graph_map,game_state):
@@ -697,84 +699,135 @@ class pacman_game:
     def is_valid_pos(self,graph_map,pos):
         return 0 <= pos[0] < 30 and 0 <= pos[1] < 28 and pos in graph_map
     
-    def get_monster_move(self,graph_map,pacman_pos,poses):
-        new_monsters_pos  = []
-        # Directions (left, up, right, down)
-        directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
-        for pos in poses:
-            temp = []
-            try:
-                for direction in directions:
-                    new_pos = (pos[0] + direction[0], pos[1] + direction[1])
-                    if self.is_valid_pos(graph_map,new_pos):
-                        temp.append(self.heuristic(pacman_pos,pos))
-                    else:
-                        temp.append(float('inf'))
-                index_min = temp.index(min(temp))
-                new_monsters_pos.append((pos[0] + directions[index_min][0], pos[1] + directions[index_min][1]))
-            except:
-                print()
-        return new_monsters_pos
+    # def get_monster_move(self,graph_map,pacman_pos,poses):
+    #     new_monsters_pos  = []
+    #     # Directions (left, up, right, down)
+    #     directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
+    #     for pos in poses:
+    #         temp = []
+    #         try:
+    #             for direction in directions:
+    #                 new_pos = (pos[0] + direction[0], pos[1] + direction[1])
+    #                 if self.is_valid_pos(graph_map,new_pos):
+    #                     temp.append(self.heuristic(pacman_pos,pos))
+    #                 else:
+    #                     temp.append(float('inf'))
+    #             index_min = temp.index(min(temp))
+    #             new_monsters_pos.append((pos[0] + directions[index_min][0], pos[1] + directions[index_min][1]))
+    #         except:
+    #             print()
+    #     return new_monsters_pos
     
-    def get_possible_moves(self,graph_map,game_state):
-        '''
+    # def get_possible_moves(self,graph_map,game_state):
+    #     '''
         
+    #     '''
+    #     pacman_pos = game_state.pacman_pos
+    #     foods_pos = game_state.foods_pos
+    #     monsters_pos = game_state.monsters_pos
+    #     points = game_state.points
+
+    #     possible_moves = []
+    #     # Directions (left, up, right, down)
+    #     directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
+
+    #     # Simulate Pacman's movement
+    #     for direction in directions:
+    #         new_pacman_pos = (pacman_pos[0] + direction[0], pacman_pos[1] + direction[1])
+
+    #         if self.is_valid_pos(graph_map,new_pacman_pos) and new_pacman_pos not in monsters_pos:
+    #             new_points = points
+    #             if new_pacman_pos in foods_pos:
+    #                 new_points += 1
+    #             new_foods_pos = [pos for pos in foods_pos if pos != new_pacman_pos]
+
+    #             #Monsters move
+    #             temp = True
+    #             # print(monsters_pos)
+    #             # print(game_state.monsters_pos)
+    #             new_monsters_pos = self.get_monster_move(graph_map,new_pacman_pos,monsters_pos)
+    #             for pos in new_monsters_pos:
+    #                 if pos == pacman_pos:
+    #                     new_game_state = GameState_lv4(new_pacman_pos, new_foods_pos, new_monsters_pos, new_points)
+    #                     possible_moves.append(new_game_state)
+    #                     temp = False
+    #                     # Handle Pacman caught by a monster (e.g., game over)
+    #                     break
+    #             if (temp):
+    #                 new_game_state = GameState_lv4(new_pacman_pos, new_foods_pos, new_monsters_pos, new_points)
+    #                 possible_moves.append(new_game_state)
+                    
+    #     return possible_moves
+    
+    def get_moves(self,graph_map,game_state,player):
+        '''
+        input: graph map, gamestate, player (monster or pacman)
+        output: 
+        4 (if possible) states for pacman
+        or a state next move of monster (using A*)
         '''
         pacman_pos = game_state.pacman_pos
         foods_pos = game_state.foods_pos
         monsters_pos = game_state.monsters_pos
         points = game_state.points
-
         possible_moves = []
-        # Directions (left, up, right, down)
-        directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
+        if player: #pacman
+            # Directions (left, up, right, down)
+            directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
 
-        # Simulate Pacman's movement
-        for direction in directions:
-            new_pacman_pos = (pacman_pos[0] + direction[0], pacman_pos[1] + direction[1])
+            for direction in directions:
+                new_pacman_pos = (pacman_pos[0] + direction[0], pacman_pos[1] + direction[1])
 
-            if self.is_valid_pos(graph_map,new_pacman_pos) and new_pacman_pos not in monsters_pos:
-                new_points = points
-                if new_pacman_pos in foods_pos:
-                    new_points += 1
-                new_foods_pos = [pos for pos in foods_pos if pos != new_pacman_pos]
-
-                #Monsters move
-                temp = True
-                # print(monsters_pos)
-                # print(game_state.monsters_pos)
-                new_monsters_pos = self.get_monster_move(graph_map,new_pacman_pos,monsters_pos)
-                for pos in new_monsters_pos:
-                    if pos == pacman_pos:
-                        new_game_state = GameState_lv4(new_pacman_pos, new_foods_pos, new_monsters_pos, new_points)
-                        possible_moves.append(new_game_state)
-                        temp = False
-                        # Handle Pacman caught by a monster (e.g., game over)
-                        break
-                if (temp):
-                    new_game_state = GameState_lv4(new_pacman_pos, new_foods_pos, new_monsters_pos, new_points)
+                if self.is_valid_pos(graph_map,new_pacman_pos) and new_pacman_pos not in monsters_pos:
+                    new_points = points
+                    if new_pacman_pos in foods_pos:
+                        new_points += 1
+                    new_foods_pos = [pos for pos in foods_pos if pos != new_pacman_pos]
+                    new_game_state = GameState_lv4(new_pacman_pos, new_foods_pos, monsters_pos, new_points)
                     possible_moves.append(new_game_state)
-                    
-        return possible_moves
+            return possible_moves
+        else:#Monster
+            new_monsters_pos  = []
+            # Directions (left, up, right, down)
+            directions = [(0, -1), (-1, 0), (0, 1), (1, 0)]
+            for pos in monsters_pos:
+                temp = []
+                for direction in directions:
+                    new_pos = (pos[0] + direction[0], pos[1] + direction[1])
+                    if self.is_valid_pos(graph_map,new_pos):
+                        temp.append(self.heuristic(pacman_pos,new_pos))
+                    else:
+                        temp.append(float('inf'))
+                index_min = temp.index(min(temp))
+                new_monsters_pos.append((pos[0] + directions[index_min][0], pos[1] + directions[index_min][1]))
+            new_game_state = GameState_lv4(pacman_pos, foods_pos, new_monsters_pos, points)
+            # possible_moves.append(new_game_state)
+            return new_game_state
 
     def minimax(self,graph_map,game_state,depth,player):
         if depth==0 or (self.is_terminal_state(graph_map,game_state)):
-            return (self.evaluation_function(graph_map,game_state))
+            return (self.evaluation_function(graph_map,game_state),None)
 
         if player: #Pacman
             max_eval = float('-inf')
-            for sub_state in self.get_possible_moves(graph_map,game_state,True):
-                # print(sub_state.monsters_pos)
-                eval = self.minimax(graph_map,sub_state, depth - 1, False)
-                max_eval = max(max_eval, eval)
-            return max_eval
+            best_move = None
+            list_states = self.get_moves(graph_map,game_state,True)
+            for sub_state in list_states:
+                eval,temp = self.minimax(graph_map,sub_state, depth - 1, False)
+                if eval>max_eval:
+                    max_eval = eval
+                    best_move = sub_state.pacman_pos
+            return max_eval,best_move
         else:
             min_eval = float('inf')
-            for sub_state in self.get_possible_moves(graph_map,game_state,False):
-                # print(sub_state.monsters_pos)
-                eval = self.minimax(graph_map,sub_state, depth - 1, True)
-                min_eval = min(min_eval, eval)
-            return min_eval 
+            best_move = None
+            list_states = self.get_moves(graph_map,game_state,False)
+            # for sub_state in list_states:
+            eval,temp = self.minimax(graph_map,list_states, depth - 1, True)
+            if eval<min_eval:
+                min_eval = eval
+                best_move = list_states.monsters_pos
+            return min_eval,best_move 
 
     def pacman_lv4(self):
         graph_map, pacman_pos, foods_pos, monster_list = readmap.map_level4(s_map_txt_path[self.level-1][self.map_index])
@@ -796,28 +849,44 @@ class pacman_game:
         keys_monster = list(monster_list.keys())
         point = 0
 
-        initial_state = GameState_lv4(pacman_pos,foods_pos,keys_monster,point)
-        # print(keys_monster)
-        # print(foods_pos)
-        # print(pacman_pos)
-        # print(graph_map[(5,1)])
-        # print(graph_map[(5,2)])
+        game_state = GameState_lv4(pacman_pos,foods_pos,keys_monster,point)
+
         best_move = None
         best_score = float('-inf')
-        depth = 10
+        depth = 20
 
-        possible_state = self.get_possible_moves(graph_map,initial_state)
+        # possible_state = self.get_possible_moves(graph_map,initial_state)
         '''
         lay ra duoc n trang thai con pacman di (1buoc)
         '''
-        for sub_state in possible_state:
-            eval = self.minimax(graph_map,sub_state, depth, False)
-            # temp = self.get_possible_moves(graph_map,sub_state)
-            print(eval)
+        for i in range(100):
+            pygame.event.pump()
+            #Pacman
+            eval,best_move = self.minimax(graph_map,game_state,depth,1)
+            print()
+            if best_move in foods_pos:
+                food = ag.Food(self, (best_move[1], best_move[0]))
+                food.food_disappear()
+                foods_pos.remove(best_move) 
+            game_state.pacman_pos=best_move
+            pacman_pos_draw = [best_move[1],best_move[0]]
+            pacman.pacman_control(pacman_pos_draw)
+            
 
-        pygame.time.delay(3000)
+            #Monster
+            best_move_monster = self.get_moves(graph_map,game_state,0).monsters_pos
+            for j in range(len(best_move_monster)):
+                # print(best_move_monster[j])
+                monster = ag.Monster(self, (game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]))    
+                monster.monster_disappear()
+                game_state.monsters_pos[j] = best_move_monster[j]
+                monster = ag.Monster(self, (game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]))
+                monster.monster_control([game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]])
+
+            pygame.time.delay(50)
+        print("Hello world")
+        pygame.time.delay(1000)
         self.stage = s_display_f_vic
-
 
     #Scoring
     def pacman_scoring(self, score):
