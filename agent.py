@@ -138,7 +138,7 @@ class Pacman:
     #Detect nearby monster of food cell in visibility area
     def monster_arround_food_detect(self, food_cell):
         for mons in self.vision_mons_list:
-            if abs(mons.position[0] - food_cell.position[0]) + abs(mons.position[0] - food_cell.position[0]) <= 1:
+            if abs(mons.position[0] - food_cell.position[0]) + abs(mons.position[0] - food_cell.position[0]) <= 2:
                 return True
         return False
 
@@ -238,11 +238,13 @@ class Monster():
         self.co_or_pos = togo_pos
         self.pixel_pos = self.coor_to_pixel()
 
+
     def get_direction(self, togo_pos):
         if togo_pos[0] - self.co_or_pos[0] == 1:  # Move Right
             self.direction = s_direction_R
         elif togo_pos[0] - self.co_or_pos[0] == -1:  # Move Left
             self.direction = s_direction_L
+
 
     def get_around_cells_of_initial_cell(self, graph_map):
         return graph_map[self.initial_cell]

@@ -512,128 +512,151 @@ class pacman_game:
 
     # Level 3-----------------------------------------------------------------------------------------------------------
     def pacman_lv3(self):
-        cells, map_graph, pacman_cell, food_cell_list, monsters_cell_list = readmap.map_level3(s_map_txt_path[self.level-1][self.map_index])
+        graph_map, pacman_pos, foods_pos, monster_list = readmap.map_level3(s_map_txt_path[self.level - 1][self.map_index])
+
+        count = 0  # Number of points need to get
 
         # Call Pacman
-        pacman = ag.Pacman(self, pacman_cell.position, pacman_cell)
+        pacman_pos_draw = [pacman_pos[1], pacman_pos[0]]
+        pacman = ag.Pacman(self, pacman_pos_draw)
         pacman.pacman_call()
         # Call Food
-        foods = [ag.Food(self, food_cell.position, food_cell) for food_cell in food_cell_list]
-        for foo in foods:
-            foo.food_display()
+        for foods_pos_t in foods_pos:
+            foods_pos_draw_t = [foods_pos_t[1], foods_pos_t[0]]
+            food = ag.Food(self, foods_pos_draw_t)
+            food.food_display()
         # Call Monster
-        monsters = [ag.Monster(self, monster_cell.position, monster_cell) for monster_cell in monsters_cell_list]
+        monsters = [ag.Monster(self, [pos[1], pos[0]]) for pos in list(monster_list.keys())]
         for mons in monsters:
             mons.monster_call()
 
-        start = timeit.default_timer()
-        #Scan for the first time
-        pacman.scan_radar(map_graph)
+        pre_pos = None
+        time_visits = {}
+        for key in list(graph_map.keys()):
+            time_visits[key] = 0
+        index = 0
+        parity_index_monster = 0  # to keep monster in this 5 cells
+
+        # Preprocessing
+        # Position of monsters
+        old_pos = []
+        for name in list(monster_list.keys()):
+            old_pos.append(name)
+
+        new_pos = old_pos.copy()
+        keys_monster = list(monster_list.keys())
+
+        # Heuristics
+        heuristic_call = {}
+        for pos in graph_map[pacman_pos]:
+            heuristic_call[pos] = ls.heuristic_lv3_2around(pacman_pos, graph_map, pos, foods_pos, old_pos)
+
+        heuristic_call = dict(sorted(heuristic_call.items(), key=lambda item: item[1], reverse=True))
+
+        # count_test = 0
         #
-        self.time_algorithm = timeit.default_timer() - start
-
-        #Go
-        go_home = 0     #go to home stage
-        catch   = 0     #catch by monster
-        start_play = timeit.default_timer()
+        # backup_heuristic = None
+        # backup_old_pos = None
+        catch = 0
+        go_home = 0
         while True:
-            #Is Pacman going back to get food, which have position saved in Pacman's memory.
-            is_backtracking = False
-            #Pacman's previous cell
-            pacman_pre_cell = pacman.cell
+            # Display pacman
+            new_pacman_pos = list(heuristic_call.keys())[0]
+            if new_pacman_pos in foods_pos:
+                count += 1
+                food = ag.Food(self, (new_pacman_pos[1], new_pacman_pos[0]))
+                food.food_disappear()
+                self.pacman_scoring(s_score_gift)
+                foods_pos.remove(new_pacman_pos)
 
-            #Get out current cell
-            pacman.cell.out_pacman()
-            #Scan map
-            pacman.scan_radar(map_graph)
+            if len(foods_pos) == 0:
+                self.stage = s_display_f_vic
+                break
 
-            if not pacman.check_detected_food() and not pacman.check_food():
-                #No detected_food in memory and no food in visibility area
-                pacman.cell = pacman.back_track(map_graph)
-                is_backtracking = True
-            else:
-                # Pacman moves with heuristic local search:
-                start = timeit.default_timer()
-                #
-                pacman.cell = ls.local_search(cells, map_graph, pacman.cell)
-                #
-                self.time_algorithm += timeit.default_timer() - start
-
-            pacman.cell.in_pacman()
-            pacman.pacman_control(pacman.cell.position)
+            pre_pos = pacman_pos
+            pacman_pos = new_pacman_pos
+            pacman.pacman_control([pacman_pos[1], pacman_pos[0]])
             self.pacman_scoring(s_score_move)
 
-            if not is_backtracking:
-                pacman.add_path(pacman_pre_cell)
-
-            #Check if Monsters've got Pacman's heart <3
-            for monster in monsters:
-                if pacman.cell.position == monster.cell.position:
-                    pygame.time.delay(5000)
-                    self.stage = s_display_f_ove
+            for pos in new_pos:
+                if (pacman.co_or_pos[1], pacman.co_or_pos[0]) == pos:
                     catch = 1
                     break
-            if catch:
+
+            parity_index_monster += 1
+            backup_old_pos = old_pos.copy()
+
+            # for element in list(monster_list.keys()):
+            for i in range(len(monster_list)):
+                element = keys_monster[i]
+                if (parity_index_monster % 2 == 1):
+                    old_pos[i] = element
+                    size = len(monster_list[element])
+                    num = random.randint(0, size - 1)
+                    new_pos[i] = (monster_list[element][num][0], monster_list[element][num][1])
+
+                    if ((old_pos[i][0], old_pos[i][1]) in foods_pos):
+                        foods_pos_draw_t = [old_pos[i][1], old_pos[i][0]]
+                        food = ag.Food(self, foods_pos_draw_t)
+                        food.food_display()
+
+                    monster = ag.Monster(self, (old_pos[i][1], old_pos[i][0]))
+                    monster.monster_control([new_pos[i][1], new_pos[i][0]])
+
+                    if monster.co_or_pos == pacman.co_or_pos:
+                        catch = 1
+                        break
+
+                    old_pos[i] = new_pos[i]
+                else:
+                    if ((old_pos[i][0], old_pos[i][1]) in foods_pos):
+                        foods_pos_draw_t = [old_pos[i][1], old_pos[i][0]]
+                        food = ag.Food(self, foods_pos_draw_t)
+                        food.food_display()
+
+                    new_pos[i] = element
+                    monster = ag.Monster(self, (old_pos[i][1], old_pos[i][0]))
+                    monster.monster_control([new_pos[i][1], new_pos[i][0]])
+
+                    if monster.co_or_pos == pacman.co_or_pos:
+                        catch = 1
+                        break
+
+                    old_pos[i] = new_pos[i]
+
+            if catch == 1:
+                self.stage = s_display_f_ove
                 break
 
-            # Pacman eats Food?
-            for food in foods:
-                if food.cell.position == pacman.cell.position:
-                    foods.remove(food)
-                    self.pacman_scoring(s_score_gift)
-                    for i in range(len(pacman.detected_food)):
-                        if pacman.detected_food[i] == pacman.cell:
-                            pacman.detected_food.remove(pacman.detected_food[i])
-                            pacman.path_to_detected_food.remove(pacman.path_to_detected_food[i])
-                            break
 
-            #Monsters's moving around.
-            for monster in monsters:
-                monster_old_cell = monster.cell
+            # Calculate heuristic for next move
+            heuristic_call = {}
+            for pos in graph_map[pacman_pos]:
+                if pos == pre_pos:
+                    time_visits[pos] += 2
+                else:
+                    time_visits[pos] += 1
+                heuristic_call[pos] = (-1) * time_visits[pos] + ls.heuristic_lv3_2around(pacman_pos, graph_map, pos, foods_pos, old_pos)
 
-                monster.cell.out_monster()
+            heuristic_call = dict(sorted(heuristic_call.items(), key=lambda item: item[1], reverse=True))
 
-                next_cell = monster.initial_cell                                                #Gán tạm thời: bước tiếp theo là qua về vị trí ban đầu
-                if monster.cell.position == monster.initial_cell.position:                      #Nếu Monster đang ở vị trí ban đầu thì cho nó đi các cell lân cận
-                    around_cell_list = monster.get_around_cells_of_initial_cell(map_graph)
-                    next_cell_index = random.randint(0, len(around_cell_list) - 1)
-                    next_cell = around_cell_list[next_cell_index]
+            backup_heuristic = heuristic_call
 
-                monster.cell = next_cell
-                monster.cell.in_monster()
-                monster.monster_control(monster.cell.position)
-
-                if monster_old_cell.food_here():
-                    temp_food = ag.Food(self, monster_old_cell.position, monster_old_cell)
-                    temp_food.food_display()
-
-            # Monsters catch Pacman
-            for monster in monsters:
-                if pacman.cell.position == monster.cell.position:
-                    pygame.time.delay(5000)
-                    self.stage = s_display_f_ove
-                    catch = 1
-                    break
-            if catch:
-                break
-
-            # Pacman win
-            if len(foods) == 0:
-                pygame.time.delay(200)
-                self.time_play = timeit.default_timer() - start_play
-                self.stage = s_display_f_vic
-                go_home = 0
-                break
-
-            pygame.time.delay(s_time_delay // self.speed)
-
-            #Game play action
+            # Detect event during playing game
             if self.play_get_action():
                 go_home = 1
                 break
+            else:
+                go_home = 0
 
-        if go_home:
+            pygame.time.delay(s_time_delay // self.speed)
+
+        if catch == 1:
+            self.stage = s_display_f_ove
+
+        if go_home == 1:
             self.stage = s_display_home
+
 
     # Level 4-----------------------------------------------------------------------------------------------------------
     def pacman_lv4(self):
@@ -779,8 +802,8 @@ class pacman_game:
         text_rect_score.center = (300, 450)
         self.screen.blit(text_score, text_rect_score)
         #
-        print(self.time_algorithm)
-        print(self.time_play)
+        #print(self.time_algorithm)
+        #print(self.time_play)
         #
         pygame.display.update()
 
