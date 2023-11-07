@@ -138,7 +138,7 @@ class Pacman:
     #Detect nearby monster of food cell in visibility area
     def monster_arround_food_detect(self, food_cell):
         for mons in self.vision_mons_list:
-            if abs(mons.position[0] - food_cell.position[0]) + abs(mons.position[0] - food_cell.position[0]) <= 1:
+            if abs(mons.position[0] - food_cell.position[0]) + abs(mons.position[0] - food_cell.position[0]) <= 2:
                 return True
         return False
 
@@ -250,4 +250,5 @@ class Monster():
     def get_around_cells(self, graph_map):
         return graph_map[self.cell]
 
-
+    def monster_disappear(self):
+        pygame.display.update(self.app.screen.blit(self.blank_space, self.pixel_pos))
