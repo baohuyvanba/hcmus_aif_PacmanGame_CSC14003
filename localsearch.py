@@ -1,133 +1,80 @@
-#Heuristic Local Search
-from constant_value import *
+def heuristic_lv3_around(graph_map,position,foods_pos,pre_pos,monster_pos):
+    '''
+    Input: graphmap, position (pacman), foods_pos (list of food pos[(),(),..]),prepos(position haved gone), 
+    monster_pos (list of monster post) [(),(),..]
+    Output: Giá trị heuristic
+    Khi gặp monster cách pacman 2,3 bước đi thì giá trị sẽ lần lượt nhỏ hơn, -30, và -20
+    '''
+    heu = 0
+    if position in foods_pos:
+        heu+=2
+    if position in monster_pos:
+        heu -= 40
+    for pos in graph_map[position]:
+        if pos in pre_pos:
+            continue
+        if pos in foods_pos and pos not in pre_pos:
+            pre_pos.append(pos)
+            heu+=2
+        elif pos in monster_pos:
+            heu-=20
 
-class Cell:
-    def __init__(self, position, state):
-        self.position = position
-        self.state    = state    #List of state: Blank = pathway, s_state_food, s_state_monster, s_state_pacman
-        self.heuristic = 0
-        self.visited = 0
+    return heu
 
-    #Check if cell contains Food
-    def food_here(self):
-        return (s_state_food in self.state)
+def heuristic_lv3_2around(pacman_pos,graph_map,position,foods_pos,monster_pos):
+    '''
+    Input: pacman position, graphmap, postion: vị trí kế của pacman_pos đang xét (trái, trên, phải, dưới)
+    foods_pos (list of food pos[(),(),..]),prepos(position haved gone), 
+    monster_pos (list of monster post) [(),(),..]
+    Output: Giá trị heuristic
+    Check xem vị trí kế cận (1 bước đi) của pacman có phải là monster không, nếu có thì lấy 
+    -60, sau đó từ vị trí này lại xét thêm 2 bước nữa (vì pacman nhận biết được 3 bước xung quanh)
+    Nếu vị trí đó là.
+    Tất nhiên là mình sẽ không xét lại vị trí trước đó (pacman_pos, đi tới vị trí này).
+    '''
+    heu = 0
+    if position in foods_pos:
+        heu+=2
+    if position in monster_pos:
+        heu -= 60
+    pre_pos = []
+    pre_pos.append(position)
+    pre_pos.append(pacman_pos)
+    for pos in graph_map[position]: 
+        if pos == pacman_pos:
+            continue
+        heu = heu + heuristic_lv3_around(graph_map,pos,foods_pos,pre_pos,monster_pos)
+    return heu     
 
-    #Check if cell contains Monster
-    def monster_here(self):
-        return (s_state_monster in self.state)
+# def heuristic_lv3_around(graph_map, position, foods_pos, pre_pos, monster_pos):
+#     heu = 0
+#     if position in foods_pos:
+#         heu += 2
+#     if position in monster_pos:
+#         heu -= 25
+#     for pos in graph_map[position]:
+#         if pos in pre_pos:
+#             continue
+#         if pos in foods_pos and pos not in pre_pos:
+#             pre_pos.append(pos)
+#             heu += 2
+#         elif pos in monster_pos:
+#             heu -= 15
 
-    # Check if cell contains Monster
-    def monster_here(self):
-        return (s_state_monster in self.state)
-
-    #Food is eaten by Pacman
-    def food_eaten(self):
-        self.state.remove(s_state_food)
-
-    #Monster goes in
-    def in_monster(self):
-        self.state.append(s_state_monster)
-
-    #Monster goes out
-    def out_monster(self):
-        self.state.remove(s_state_monster)
-
-    #Pacman goes in and eats food (if present)
-    def in_pacman(self):
-        self.state.append(s_state_pacman)
-        if self.food_here():
-            self.food_eaten()
-        self.visited += 1
-
-    #Pacman goes out
-    def out_pacman(self):
-        self.state.remove(s_state_pacman)
-
-    def reset_heuristic(self):
-        self.heuristic = 0
-
-    def objective_function(self):
-        return self.heuristic - self.visited
-
-#######################################################################################################################
-def calc_heuristic(cells, graph_map, remembered, start, cur, max_depth):
-    remembered.append(cur.position)
-
-    if max_depth <= 0:
-        return
-
-    for child in graph_map[cur]:
-        if child.position not in remembered:
-
-            sub_remembered = []
-            if child.food_here():
-                update_heuristic(cells, graph_map, sub_remembered, start, child, 2, "food")
-
-            sub_remembered = []
-            if child.monster_here():
-                update_heuristic(cells, graph_map, sub_remembered, start, child, 2, "monster")
-
-            calc_heuristic(cells, graph_map, remembered.copy(), start, child, max_depth - 1)
-
-    cur.heuristic -= cur.visited
+#     return heu
 
 
-def clear_heuristic(cells, graph_map, remembered, cur, max_depth):
-    remembered.append(cur.position)
-
-    if max_depth <= 0:
-        return
-
-    for child in graph_map[cur]:
-        if child.position not in remembered:
-            child.reset_heuristic()
-
-            clear_heuristic(cells, graph_map, remembered.copy(), child, max_depth - 1)
-
-
-def update_heuristic(cells, graph_map, remembered, start, cur, max_depth, cell_type):
-    remembered.append(cur.position)
-
-    if max_depth < 0:
-        return
-
-    if cur.position == start.position:
-        return
-
-    if cell_type == "food":
-        food = 0
-        if max_depth == 2: food = 35
-        if max_depth == 1: food = 10
-        if max_depth == 0: food = 5
-        cur.heuristic += food
-
-    if cell_type == "monster":
-        monster = 0
-        if max_depth == 2: monster = float("-inf")
-        if max_depth == 1: monster = float("-inf")
-        if max_depth == 0: monster = -100
-        cur.heuristic += monster
-
-    for child in graph_map[cur]:
-        if child.position not in remembered:
-            update_heuristic(cells, graph_map, remembered.copy(), start, child, max_depth - 1, cell_type)
-
-
-def local_search(cells, graph_map, pacman_position):
-    remembered = []
-    clear_heuristic(cells, graph_map, remembered, pacman_position, 3)
-
-    remembered = []
-    calc_heuristic(cells, graph_map, remembered, pacman_position, pacman_position, 3)
-
-    max_f = float("-inf")
-    next_step = None
-
-    for child in graph_map[pacman_position]:
-        if max_f < child.objective_function():
-            max_f = child.objective_function()
-            next_step = child
-
-    return next_step
-
-
+# def heuristic_lv3_2around(pacman_pos, graph_map, position, foods_pos, monster_pos):
+#     heu = 0
+#     if position in foods_pos:
+#         heu += 2
+#     if position in monster_pos:
+#         heu -= 35
+#     pre_pos = []
+#     pre_pos.append(position)
+#     pre_pos.append(pacman_pos)
+#     for pos in graph_map[position]:
+#         if pos == pacman_pos:
+#             continue
+#         heu = heu + heuristic_lv3_around(graph_map, pos, foods_pos, pre_pos, monster_pos)
+#     return heu

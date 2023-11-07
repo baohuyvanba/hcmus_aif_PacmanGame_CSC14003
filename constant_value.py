@@ -8,7 +8,7 @@ s_display_caption  = r'./Pacman Game'
 s_display_iconpath = r'./Resources/Game Display/icon.png'
 s_display_fps = 60
 
-s_font_path  = r'./Resources/8514fix.fon'
+s_font_path  = r'./Resources/Font/Product_Sans_Regular.otf'
 
 s_display_bg = r'./Resources/Game Display/PM-MainMenu.png'
 s_display_ab = r'./Resources/Game Display/PM-About.png'
@@ -58,6 +58,8 @@ s_button_shade_playsped       = r'./Resources/Game Display/Button/Shade_3.png'
 s_button_shade_playsped_clean = r'./Resources/Game Display/Button/Shade_3_clean.png'
 s_button_inner_playsped       = r'./Resources/Game Display/Button/Shade_3_inner.png'
 
+s_time_delay = 50
+
 #Score Position
 s_pos_score = (20, 665, 50, 20)
 s_pos_scorevalue = (75, 665, 90, 20)
@@ -91,3 +93,12 @@ s_character_monster = r'./Resources/Character/Monster/monster.png'
 s_state_food    = 2
 s_state_monster = 3
 s_state_pacman  = 4
+
+#Heuristic value
+s_food_1 = 35
+s_food_2 = 10
+s_food_3 = 5
+
+s_mons_1 = -100
+s_mons_2 = -50
+s_mons_3 = -35
