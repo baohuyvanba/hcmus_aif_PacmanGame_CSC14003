@@ -99,6 +99,6 @@ s_food_1 = 35
 s_food_2 = 10
 s_food_3 = 5
 
-s_mons_1 = float("-inf")
-s_mons_2 = float("-inf")
-s_mons_3 = -100
+s_mons_1 = -100
+s_mons_2 = -50
+s_mons_3 = -35
