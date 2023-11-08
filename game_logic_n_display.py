@@ -5,12 +5,15 @@ import pygame
 import pygame.freetype
 import timeit
 import random
+from math import inf
 
 import map_txt_reading as readmap
 import map_txt_builder as buildmap
 import astar_search as astar
+import bfs_dfs_ucs_search as bdu
 import agent as ag
 import localsearch as ls
+import alpha_beta_pruning as ab
 from constant_value import *
 
 class pacman_game:
@@ -29,6 +32,7 @@ class pacman_game:
         self.button_shade = pygame.image.load(s_button_shade)
         self.about_bg     = pygame.image.load(s_display_ab)
         self.level_bg     = pygame.image.load(s_display_lv)
+        self.algo_bg      = pygame.image.load(s_display_al)
         self.map_bg       = pygame.image.load(s_display_pm)
         self.gameplay_bg  = pygame.image.load(s_display_gp)
 
@@ -69,11 +73,11 @@ class pacman_game:
         self.score = 0
         self.level = 1
         self.speed = 1
+        self.algorithm = s_algorithm_dfs
 
         #Game time
         self.time_algorithm = 0
         self.time_play      = 0
-
 
     #GAME RUNNING ------------------------------------------------------------------------------------------------------------------------------------------------
     def run(self):
@@ -96,6 +100,10 @@ class pacman_game:
             elif self.stage == s_display_play:
                 self.picklevel_display()
                 self.level_get_action()
+            #Pick Algorithm
+            elif self.stage == s_display_al:
+                self.pickalgo_display()
+                self.algo_get_action()
             #Pick Map
             elif self.stage == s_display_map:
                 self.pickmap_display()
@@ -114,12 +122,25 @@ class pacman_game:
                 text_sped, text_rect = self.font.render("1x", s_color_while)
                 self.screen.blit(text_sped, s_pos_speedvalue)
                 pygame.display.update(s_pos_speedvalue)
-                #
                 #run game
                 if self.level == 1:
-                    self.pacman_lv1()
+                    if self.algorithm == s_algorithm_dfs:
+                        self.pacman_lv1_dfs()
+                    elif self.algorithm == s_algorithm_bfs:
+                        self.pacman_lv1_bfs()
+                    elif self.algorithm == s_algorithm_ucs:
+                        self.pacman_lv1_ucs()
+                    elif self.algorithm == s_algorithm_astart:
+                        self.pacman_lv1_astar()
                 elif self.level == 2:
-                    self.pacman_lv2()
+                    if self.algorithm == s_algorithm_dfs:
+                        self.pacman_lv2_dfs()
+                    elif self.algorithm == s_algorithm_bfs:
+                        self.pacman_lv2_bfs()
+                    elif self.algorithm == s_algorithm_ucs:
+                        self.pacman_lv2_ucs()
+                    elif self.algorithm == s_algorithm_astart:
+                        self.pacman_lv2_astar()
                 elif self.level == 3:
                     self.pacman_lv3()
                 elif self.level == 4:
@@ -139,7 +160,6 @@ class pacman_game:
             self.clock.tick(s_display_fps)
 
     #DISPLAY STAGE (Menu, About, Level)---------------------------------------------------------------------------------
-
     #Display Main_Menu
     def mainmenu_display(self):
         self.screen.fill(s_color_black)
@@ -158,6 +178,12 @@ class pacman_game:
         self.screen.blit(self.level_bg, (0, 0))
         pygame.display.update()
 
+    #Display Algorithm Picking (Level 1 and Level 2)
+    def pickalgo_display(self):
+        self.screen.fill(s_color_black)
+        self.screen.blit(self.algo_bg, (0, 0))
+        pygame.display.update()
+
     #Display Map picking
     def pickmap_display(self):
         self.screen.fill(s_color_black)
@@ -167,10 +193,11 @@ class pacman_game:
 
     def show_map_option(self):
         self.map = pygame.image.load(s_map_gra_path[self.level - 1][self.map_index])
-        pygame.display.update(self.screen.blit(pygame.transform.scale(self.map, (350, 375)), (125, 162)))
+        orix, oriy = self.map.get_size()
+        oriy, orix =350*oriy/orix, 350
+        pygame.display.update(self.screen.blit(pygame.transform.scale(self.map, (orix-4, oriy-4)), (125+2, 162+2)))
 
     # STAGE ACTION (Menu, About, Level)---------------------------------------------------------------------------------
-
     #Main_Screen Action
     def mainmenu_get_action(self):
         for event in pygame.event.get():
@@ -229,11 +256,11 @@ class pacman_game:
                     self.stage = s_display_home
                 #Level 1
                 elif 220 <= self.mouse[0] <= 380 and 170 <= self.mouse[1] <= 230:
-                    self.stage = s_display_map
+                    self.stage = s_display_al
                     self.level = 1
                 #Level 2
                 elif 220 <= self.mouse[0] <= 380 and 260 <= self.mouse[1] <= 320:
-                    self.stage = s_display_map
+                    self.stage = s_display_al
                     self.level = 2
                 #Level 3
                 elif 220 <= self.mouse[0] <= 380 and 350 <= self.mouse[1] <= 410:
@@ -243,7 +270,54 @@ class pacman_game:
                 elif 220 <= self.mouse[0] <= 380 and 440 <= self.mouse[1] <= 500:
                     self.stage = s_display_map
                     self.level = 4
-            # Quit game :<
+            # Quit game
+            elif event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+        self.mouse = pygame.mouse.get_pos()
+
+        # Create Button Shade
+        if 220 <= self.mouse[0] <= 380 and 530 <= self.mouse[1] <= 590:
+            self.screen.blit(self.button_shade, (220, 530))
+            pygame.display.update()
+        elif 220 <= self.mouse[0] <= 380 and 170 <= self.mouse[1] <= 230:
+            self.screen.blit(self.button_shade, (220, 170))
+            pygame.display.update()
+        elif 220 <= self.mouse[0] <= 380 and 260 <= self.mouse[1] <= 320:
+            self.screen.blit(self.button_shade, (220, 260))
+            pygame.display.update()
+        elif 220 <= self.mouse[0] <= 380 and 350 <= self.mouse[1] <= 410:
+            self.screen.blit(self.button_shade, (220, 350))
+            pygame.display.update()
+        elif 220 <= self.mouse[0] <= 380 and 440 <= self.mouse[1] <= 500:
+            self.screen.blit(self.button_shade, (220, 440))
+            pygame.display.update()
+
+    #Algorithm_Screen Action
+    def algo_get_action(self):
+        for event in pygame.event.get():
+            # Left mouse click
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                #Back
+                if 220 <= self.mouse[0] <= 380 and 530 <= self.mouse[1] <= 590:
+                    self.stage = s_display_lv
+                #dfs
+                elif 220 <= self.mouse[0] <= 380 and 170 <= self.mouse[1] <= 230:
+                    self.stage = s_display_map
+                    self.algorithm = s_algorithm_dfs
+                #bfs
+                elif 220 <= self.mouse[0] <= 380 and 260 <= self.mouse[1] <= 320:
+                    self.stage = s_display_map
+                    self.algorithm = s_algorithm_bfs
+                #ucs
+                elif 220 <= self.mouse[0] <= 380 and 350 <= self.mouse[1] <= 410:
+                    self.stage = s_display_map
+                    self.algorithm = s_algorithm_ucs
+                #astar
+                elif 220 <= self.mouse[0] <= 380 and 440 <= self.mouse[1] <= 500:
+                    self.stage = s_display_map
+                    self.algorithm = s_algorithm_astart
+            # Quit game
             elif event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
@@ -306,7 +380,6 @@ class pacman_game:
             pygame.display.update(self.screen.blit(self.map_playbutton_shade, (250, 624)))
 
     # GAME LEVEL PLAY --------------------------------------------------------------------------------------------------
-
     #Play Game Display
     def playgame_display(self):
         self.screen.fill(s_color_black)
@@ -315,7 +388,7 @@ class pacman_game:
         self.screen.blit(self.map, (20, 40))
         pygame.display.update()
 
-    #Play Game Action===================================================================================================
+    #Play Game Action
     def play_get_action(self):
         #Detect event
         for event in pygame.event.get():
@@ -348,7 +421,6 @@ class pacman_game:
                         self.screen.blit(text_sped, s_pos_speedvalue)
                         pygame.display.update(s_pos_speedvalue)
 
-
         #Create button shade
         self.mouse = pygame.mouse.get_pos()
         if 480 <= self.mouse[0] <= 540 and 661 <= self.mouse[1] <= 681:
@@ -363,47 +435,49 @@ class pacman_game:
             return True
         return False
 
+    #LEVEL FUNCTION ====================================================================================================
     # Level 1-----------------------------------------------------------------------------------------------------------
-    def pacman_lv1(self):
-        graph_map, pacman_pos, food_pos = readmap.map_level1(s_map_txt_path[self.level-1][self.map_index])
+    def pacman_lv1_astar(self):
+        graph_map, pacman_pos, food_pos = readmap.map_level1(s_map_txt_path[self.level - 1][self.map_index])
+
+        self.time_algorithm = 0
+        self.time_play = 0
 
         start = timeit.default_timer()
-        #Run A*
+        # Run A*
         pathway = astar.astar_search(graph_map, pacman_pos, food_pos)
         #
         self.time_algorithm = timeit.default_timer() - start
 
-        #Call Pacman
+        # Call Pacman
         pacman = ag.Pacman(self, pacman_pos)
         pacman.pacman_call()
-        #Call Food
+        # Call Food
         food = ag.Food(self, food_pos)
         food.food_display()
-        #Call Monster: No
+        # Call Monster: No
 
-        start = timeit.default_timer()
-        #Have pathway to goal
+        # Have pathway to goal
         if pathway is not None:
-            print(pathway)
-            #Set pathway, score(0)
+            # Set pathway, score(0)
             goal = pathway[-1]
             pathway_togoal = pathway[1:-1]
             self.pacman_scoring(0)
             pygame.time.delay(500)
             go_home = 0
-            #Go
+            # Go
             for loc in pathway_togoal:
                 pacman.pacman_control(loc)
                 self.pacman_scoring(s_score_move)
-                pygame.time.delay(s_time_delay//self.speed)
-                #Detect event during playing game
+                pygame.time.delay(s_time_delay // self.speed)
+                # Detect event during playing game
                 if self.play_get_action():
                     go_home = 1
                     break
                 else:
                     go_home = 0
 
-            #Go to goal (if not pressed go home button)
+            # Go to goal (if not pressed go home button)
             if go_home != 1:
                 food.food_disappear()
                 pacman.pacman_control(goal)
@@ -411,15 +485,193 @@ class pacman_game:
                 pygame.time.delay(2000)
                 self.time_play = timeit.default_timer() - start
                 self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
             else:
                 self.stage = s_display_home
-        #Have no pathway to goal
+                print("Algorithm run time: ", self.time_algorithm)
+        # Have no pathway to goal
         else:
             self.stage = s_display_f_ove
+            print("Algorithm run time: ", self.time_algorithm)
+
+    def pacman_lv1_bfs(self):
+        graph_map, pacman_pos, food_pos = readmap.map_level1(s_map_txt_path[self.level - 1][self.map_index])
+
+        self.time_algorithm = 0
+        self.time_play = 0
+
+        start = timeit.default_timer()
+        # Run A*
+        pathway = bdu.bfs(graph_map, pacman_pos, food_pos)
+        #
+        self.time_algorithm = timeit.default_timer() - start
+
+        # Call Pacman
+        pacman = ag.Pacman(self, pacman_pos)
+        pacman.pacman_call()
+        # Call Food
+        food = ag.Food(self, food_pos)
+        food.food_display()
+        # Call Monster: No
+
+        # Have pathway to goal
+        if pathway is not None:
+            # Set pathway, score(0)
+            goal = pathway[-1]
+            pathway_togoal = pathway[1:-1]
+            self.pacman_scoring(0)
+            pygame.time.delay(500)
+            go_home = 0
+            # Go
+            for loc in pathway_togoal:
+                pacman.pacman_control(loc)
+                self.pacman_scoring(s_score_move)
+                pygame.time.delay(s_time_delay // self.speed)
+                # Detect event during playing game
+                if self.play_get_action():
+                    go_home = 1
+                    break
+                else:
+                    go_home = 0
+
+            # Go to goal (if not pressed go home button)
+            if go_home != 1:
+                food.food_disappear()
+                pacman.pacman_control(goal)
+                self.pacman_scoring(s_score_gift)
+                pygame.time.delay(2000)
+                self.time_play = timeit.default_timer() - start
+                self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
+            else:
+                self.stage = s_display_home
+                print("Algorithm run time: ", self.time_algorithm)
+        # Have no pathway to goal
+        else:
+            self.stage = s_display_f_ove
+            print("Algorithm run time: ", self.time_algorithm)
+
+    def pacman_lv1_dfs(self):
+        graph_map, pacman_pos, food_pos = readmap.map_level1(s_map_txt_path[self.level - 1][self.map_index])
+
+        self.time_algorithm = 0
+        self.time_play = 0
+
+        start = timeit.default_timer()
+        # Run A*
+        pathway = bdu.dfs(graph_map, pacman_pos, food_pos)
+        #
+        self.time_algorithm = timeit.default_timer() - start
+
+        # Call Pacman
+        pacman = ag.Pacman(self, pacman_pos)
+        pacman.pacman_call()
+        # Call Food
+        food = ag.Food(self, food_pos)
+        food.food_display()
+        # Call Monster: No
+
+        # Have pathway to goal
+        if pathway is not None:
+            # Set pathway, score(0)
+            goal = pathway[-1]
+            pathway_togoal = pathway[1:-1]
+            self.pacman_scoring(0)
+            pygame.time.delay(500)
+            go_home = 0
+            # Go
+            for loc in pathway_togoal:
+                pacman.pacman_control(loc)
+                self.pacman_scoring(s_score_move)
+                pygame.time.delay(s_time_delay // self.speed)
+                # Detect event during playing game
+                if self.play_get_action():
+                    go_home = 1
+                    break
+                else:
+                    go_home = 0
+
+            # Go to goal (if not pressed go home button)
+            if go_home != 1:
+                food.food_disappear()
+                pacman.pacman_control(goal)
+                self.pacman_scoring(s_score_gift)
+                pygame.time.delay(2000)
+                self.time_play = timeit.default_timer() - start
+                self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
+            else:
+                self.stage = s_display_home
+                print("Algorithm run time: ", self.time_algorithm)
+        # Have no pathway to goal
+        else:
+            self.stage = s_display_f_ove
+            print("Algorithm run time: ", self.time_algorithm)
+
+    def pacman_lv1_ucs(self):
+        graph_map, pacman_pos, food_pos = readmap.map_level1(s_map_txt_path[self.level - 1][self.map_index])
+
+        self.time_algorithm = 0
+        self.time_play = 0
+
+        start = timeit.default_timer()
+        # Run A*
+        pathway = bdu.ucs(graph_map, pacman_pos, food_pos)
+        #
+        self.time_algorithm = timeit.default_timer() - start
+
+        # Call Pacman
+        pacman = ag.Pacman(self, pacman_pos)
+        pacman.pacman_call()
+        # Call Food
+        food = ag.Food(self, food_pos)
+        food.food_display()
+        # Call Monster: No
+
+        # Have pathway to goal
+        if pathway is not None:
+            # Set pathway, score(0)
+            goal = pathway[-1]
+            pathway_togoal = pathway[1:-1]
+            self.pacman_scoring(0)
+            pygame.time.delay(500)
+            go_home = 0
+            # Go
+            for loc in pathway_togoal:
+                pacman.pacman_control(loc)
+                self.pacman_scoring(s_score_move)
+                pygame.time.delay(s_time_delay // self.speed)
+                # Detect event during playing game
+                if self.play_get_action():
+                    go_home = 1
+                    break
+                else:
+                    go_home = 0
+
+            # Go to goal (if not pressed go home button)
+            if go_home != 1:
+                food.food_disappear()
+                pacman.pacman_control(goal)
+                self.pacman_scoring(s_score_gift)
+                pygame.time.delay(2000)
+                self.time_play = timeit.default_timer() - start
+                self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
+            else:
+                self.stage = s_display_home
+                print("Algorithm run time: ", self.time_algorithm)
+        # Have no pathway to goal
+        else:
+            self.stage = s_display_f_ove
+            print("Algorithm run time: ", self.time_algorithm)
 
     # Level 2-----------------------------------------------------------------------------------------------------------
-    def pacman_lv2(self):
+    def pacman_lv2_astar(self):
         graph_map, pacman_pos, food_pos, monsters_pos_list = readmap.map_level2(s_map_txt_path[self.level-1][self.map_index], True)
+
+        self.time_algorithm = 0
+        self.time_play = 0
+
         start = timeit.default_timer()
         #Run A*
         pathway = astar.astar_search(graph_map, pacman_pos, food_pos)
@@ -465,20 +717,20 @@ class pacman_game:
                 pygame.time.delay(2000)
                 self.time_play = timeit.default_timer() - start
                 self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
             else:
                 self.stage = s_display_home
+                print("Algorithm run time: ", self.time_algorithm)
 
-        #No possible pathway exists with monster is considered as wall. So, just go and die X.X, 100% game over
+        #No possible pathway exists with monster is considered as wall. So, just go and die X_X, 100% game over
         else:
             #Build again without fake wall
             graph_map, pacman_pos, food_pos, monsters_pos_list = readmap.map_level2(s_map_txt_path[self.level - 1][self.map_index], False)
             start = timeit.default_timer()
             #Run A*
             pathway = astar.astar_search(graph_map, pacman_pos, food_pos)
-            #
             self.time_algorithm = timeit.default_timer() - start
-
-            self.time_play = -1
+            #
             if pathway is not None:
                 # Set pathway, score(0)
                 goal = pathway[-1]
@@ -503,260 +755,592 @@ class pacman_game:
 
                 # Go to goal (if possible)
                 if go_home != 1:
-                    pygame.time.delay(2000)
+                    pygame.time.delay(200)
                     self.stage = s_display_f_ove
+                    print("Algorithm run time: ", self.time_algorithm)
                 else:
                     self.stage = s_display_home
+                    print("Algorithm run time: ", self.time_algorithm)
             else:
                 self.stage = s_display_f_ove
+                print("Algorithm run time: ", self.time_algorithm)
 
-    # Level 3-----------------------------------------------------------------------------------------------------------
-    def pacman_lv3(self):
-        cells, map_graph, pacman_cell, food_cell_list, monsters_cell_list = readmap.map_level3(s_map_txt_path[self.level-1][self.map_index])
+    def pacman_lv2_bfs(self):
+        graph_map, pacman_pos, food_pos, monsters_pos_list = readmap.map_level2(
+            s_map_txt_path[self.level - 1][self.map_index], True)
+
+        self.time_algorithm = 0
+        self.time_play = 0
+
+        start = timeit.default_timer()
+        # Run BFS
+        pathway = bdu.bfs(graph_map, pacman_pos, food_pos)
+        #
+        self.time_algorithm = timeit.default_timer() - start
 
         # Call Pacman
-        pacman = ag.Pacman(self, pacman_cell.position, pacman_cell)
+        pacman = ag.Pacman(self, pacman_pos)
         pacman.pacman_call()
         # Call Food
-        foods = [ag.Food(self, food_cell.position, food_cell) for food_cell in food_cell_list]
-        for foo in foods:
-            foo.food_display()
+        food = ag.Food(self, food_pos)
+        food.food_display()
         # Call Monster
-        monsters = [ag.Monster(self, monster_cell.position, monster_cell) for monster_cell in monsters_cell_list]
+        monsters = [ag.Monster(self, pos) for pos in monsters_pos_list]
         for mons in monsters:
             mons.monster_call()
 
         start = timeit.default_timer()
-        #Scan for the first time
-        pacman.scan_radar(map_graph)
+        if pathway is not None:
+            # Set pathway, score(0)
+            goal = pathway[-1]
+            pathway_togoal = pathway[1:-1]
+            self.pacman_scoring(0)
+            pygame.time.delay(500)
+
+            # Go
+            for loc in pathway_togoal:
+                pacman.pacman_control(loc)
+                self.pacman_scoring(s_score_move)
+                pygame.time.delay(s_time_delay // self.speed)
+                # Detect event during playing game
+                if self.play_get_action():
+                    go_home = 1
+                    break
+                else:
+                    go_home = 0
+
+            # Go to goal (if not pressed go home button)
+            if go_home != 1:
+                food.food_disappear()
+                pacman.pacman_control(goal)
+                self.pacman_scoring(s_score_gift)
+                pygame.time.delay(2000)
+                self.time_play = timeit.default_timer() - start
+                self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
+            else:
+                self.stage = s_display_home
+                print("Algorithm run time: ", self.time_algorithm)
+
+        # No possible pathway exists with monster is considered as wall. So, just go and die X_X, 100% game over
+        else:
+            # Build again without fake wall
+            graph_map, pacman_pos, food_pos, monsters_pos_list = readmap.map_level2(
+                s_map_txt_path[self.level - 1][self.map_index], False)
+            start = timeit.default_timer()
+            # Run BFS
+            pathway = bdu.bfs(graph_map, pacman_pos, food_pos)
+            self.time_algorithm = timeit.default_timer() - start
+            #
+            if pathway is not None:
+                # Set pathway, score(0)
+                goal = pathway[-1]
+                pathway_togoal = pathway[1:-1]
+                self.pacman_scoring(0)
+                pygame.time.delay(500)
+
+                # Go
+                for loc in pathway_togoal:
+                    pacman.pacman_control(loc)
+                    self.pacman_scoring(s_score_move)
+                    pygame.time.delay(s_time_delay // self.speed)
+                    # Detect event during playing game
+                    if self.play_get_action():
+                        go_home = 1
+                        break
+                    else:
+                        go_home = 0
+
+                    if loc in monsters_pos_list:
+                        break
+
+                # Go to goal (if possible)
+                if go_home != 1:
+                    pygame.time.delay(200)
+                    self.stage = s_display_f_ove
+                    print("Algorithm run time: ", self.time_algorithm)
+                else:
+                    self.stage = s_display_home
+                    print("Algorithm run time: ", self.time_algorithm)
+            else:
+                self.stage = s_display_f_ove
+                print("Algorithm run time: ", self.time_algorithm)
+
+    def pacman_lv2_dfs(self):
+        graph_map, pacman_pos, food_pos, monsters_pos_list = readmap.map_level2(
+            s_map_txt_path[self.level - 1][self.map_index], True)
+
+        self.time_algorithm = 0
+        self.time_play = 0
+
+        start = timeit.default_timer()
+        # Run DFS
+        pathway = bdu.dfs(graph_map, pacman_pos, food_pos)
         #
         self.time_algorithm = timeit.default_timer() - start
 
-        #Go
-        go_home = 0     #go to home stage
-        catch   = 0     #catch by monster
-        start_play = timeit.default_timer()
-        while True:
-            #Is Pacman going back to get food, which have position saved in Pacman's memory.
-            is_backtracking = False
-            #Pacman's previous cell
-            pacman_pre_cell = pacman.cell
-
-            #Get out current cell
-            pacman.cell.out_pacman()
-            #Scan map
-            pacman.scan_radar(map_graph)
-
-            if not pacman.check_detected_food() and not pacman.check_food():
-                #No detected_food in memory and no food in visibility area
-                pacman.cell = pacman.back_track(map_graph)
-                is_backtracking = True
-            else:
-                # Pacman moves with heuristic local search:
-                start = timeit.default_timer()
-                #
-                pacman.cell = ls.local_search(cells, map_graph, pacman.cell)
-                #
-                self.time_algorithm += timeit.default_timer() - start
-
-            pacman.cell.in_pacman()
-            pacman.pacman_control(pacman.cell.position)
-            self.pacman_scoring(s_score_move)
-
-            if not is_backtracking:
-                pacman.add_path(pacman_pre_cell)
-
-            #Check if Monsters've got Pacman's heart <3
-            for monster in monsters:
-                if pacman.cell.position == monster.cell.position:
-                    pygame.time.delay(5000)
-                    self.stage = s_display_f_ove
-                    catch = 1
-                    break
-            if catch:
-                break
-
-            # Pacman eats Food?
-            for food in foods:
-                if food.cell.position == pacman.cell.position:
-                    foods.remove(food)
-                    self.pacman_scoring(s_score_gift)
-                    for i in range(len(pacman.detected_food)):
-                        if pacman.detected_food[i] == pacman.cell:
-                            pacman.detected_food.remove(pacman.detected_food[i])
-                            pacman.path_to_detected_food.remove(pacman.path_to_detected_food[i])
-                            break
-
-            #Monsters's moving around.
-            for monster in monsters:
-                monster_old_cell = monster.cell
-
-                monster.cell.out_monster()
-
-                next_cell = monster.initial_cell                                                #Gán tạm thời: bước tiếp theo là qua về vị trí ban đầu
-                if monster.cell.position == monster.initial_cell.position:                      #Nếu Monster đang ở vị trí ban đầu thì cho nó đi các cell lân cận
-                    around_cell_list = monster.get_around_cells_of_initial_cell(map_graph)
-                    next_cell_index = random.randint(0, len(around_cell_list) - 1)
-                    next_cell = around_cell_list[next_cell_index]
-
-                monster.cell = next_cell
-                monster.cell.in_monster()
-                monster.monster_control(monster.cell.position)
-
-                if monster_old_cell.food_here():
-                    temp_food = ag.Food(self, monster_old_cell.position, monster_old_cell)
-                    temp_food.food_display()
-
-            # Monsters catch Pacman
-            for monster in monsters:
-                if pacman.cell.position == monster.cell.position:
-                    pygame.time.delay(5000)
-                    self.stage = s_display_f_ove
-                    catch = 1
-                    break
-            if catch:
-                break
-
-            # Pacman win
-            if len(foods) == 0:
-                pygame.time.delay(200)
-                self.time_play = timeit.default_timer() - start_play
-                self.stage = s_display_f_vic
-                go_home = 0
-                break
-
-            pygame.time.delay(s_time_delay // self.speed)
-
-            #Game play action
-            if self.play_get_action():
-                go_home = 1
-                break
-
-        if go_home:
-            self.stage = s_display_home
-
-    # Level 4-----------------------------------------------------------------------------------------------------------
-    def pacman_lv4(self):
-        cells, map_graph, ori_map_graph, pacman_cell, food_cell_list, monsters_cell_list = readmap.map_level4(s_map_txt_path[self.level - 1][self.map_index])
-
         # Call Pacman
-        pacman = ag.Pacman(self, pacman_cell.position, pacman_cell)
+        pacman = ag.Pacman(self, pacman_pos)
         pacman.pacman_call()
-
         # Call Food
-        foods = [ag.Food(self, food_cell.position, food_cell) for food_cell in food_cell_list]
-        for food in foods:
-            food.food_display()
-
+        food = ag.Food(self, food_pos)
+        food.food_display()
         # Call Monster
-        monsters = [ag.Monster(self, monster_cell.position, monster_cell) for monster_cell in monsters_cell_list]
+        monsters = [ag.Monster(self, pos) for pos in monsters_pos_list]
         for mons in monsters:
             mons.monster_call()
 
-        # Scan for the first time
-        pacman.scan_radar(map_graph)
+        start = timeit.default_timer()
+        if pathway is not None:
+            # Set pathway, score(0)
+            goal = pathway[-1]
+            pathway_togoal = pathway[1:-1]
+            self.pacman_scoring(0)
+            pygame.time.delay(500)
 
-        # Go
-        go_home = 0  # go to home stage
-        catch = 0    # catch by monster
-        while True:
-            # Is Pacman going back to get food, which have position saved in Pacman's memory.
-            is_backtracking = False
-            # Pacman's previous cell
-            pacman_pre_cell = pacman.cell
+            # Go
+            for loc in pathway_togoal:
+                pacman.pacman_control(loc)
+                self.pacman_scoring(s_score_move)
+                pygame.time.delay(s_time_delay // self.speed)
+                # Detect event during playing game
+                if self.play_get_action():
+                    go_home = 1
+                    break
+                else:
+                    go_home = 0
 
-            # Get out current cell
-            pacman.cell.out_pacman()
-            # Scan map
-            pacman.scan_radar(map_graph)
-
-            if not pacman.check_detected_food() and not pacman.check_food() and not pacman.check_monster():
-                # No detected_food in memory and no food in visibility area
-                pacman.cell = pacman.back_track(map_graph)
-                is_backtracking = True
+            # Go to goal (if not pressed go home button)
+            if go_home != 1:
+                food.food_disappear()
+                pacman.pacman_control(goal)
+                self.pacman_scoring(s_score_gift)
+                pygame.time.delay(2000)
+                self.time_play = timeit.default_timer() - start
+                self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
             else:
-                # Pacman moves with heuristic local search:
-                pacman.cell = ls.local_search(cells, map_graph, pacman.cell)
+                self.stage = s_display_home
+                print("Algorithm run time: ", self.time_algorithm)
 
-                # Nowhere to go
-                if pacman.cell is None:
-                    self.stage = s_display_f_ove
-                    break
+        # No possible pathway exists with monster is considered as wall. So, just go and die X_X, 100% game over
+        else:
+            # Build again without fake wall
+            graph_map, pacman_pos, food_pos, monsters_pos_list = readmap.map_level2(
+                s_map_txt_path[self.level - 1][self.map_index], False)
+            start = timeit.default_timer()
+            # Run DFS
+            pathway = bdu.dfs(graph_map, pacman_pos, food_pos)
+            self.time_algorithm = timeit.default_timer() - start
+            #
+            if pathway is not None:
+                # Set pathway, score(0)
+                goal = pathway[-1]
+                pathway_togoal = pathway[1:-1]
+                self.pacman_scoring(0)
+                pygame.time.delay(500)
 
-            pacman.cell.in_pacman()
-            pacman.pacman_control(pacman.cell.position)
-            self.pacman_scoring(s_score_move)
+                # Go
+                for loc in pathway_togoal:
+                    pacman.pacman_control(loc)
+                    self.pacman_scoring(s_score_move)
+                    pygame.time.delay(s_time_delay // self.speed)
+                    # Detect event during playing game
+                    if self.play_get_action():
+                        go_home = 1
+                        break
+                    else:
+                        go_home = 0
 
-            if not is_backtracking:
-                pacman.add_path(pacman_pre_cell)
-
-            # Check if Monsters've got Pacman's heart <3
-            for monster in monsters:
-                if pacman.cell.position == monster.cell.position:
-                    pygame.time.delay(200)
-                    self.stage = s_display_f_ove
-                    catch = 1
-                    break
-            if catch:
-                break
-
-            # Pacman eats Food?
-            for food in foods:
-                if food.cell.position == pacman.cell.position:
-                    foods.remove(food)
-                    self.pacman_scoring(s_score_gift)
-                    for i in range(len(pacman.detected_food)):
-                        if pacman.detected_food[i] == pacman.cell:
-                            pacman.detected_food.remove(pacman.detected_food[i])
-                            pacman.path_to_detected_food.remove(pacman.path_to_detected_food[i])
-                            break
-
-            # Monsters move
-            for monster in monsters:
-                monster_old_cell = monster.cell
-                monster.cell.out_monster()
-
-                next_cell_list = astar.astar_search(ori_map_graph, monster.cell.position, pacman.cell.position)
-                next_cell = next_cell_list[1]
-                around_cell_list = monster.get_around_cells(map_graph)
-                for cell in around_cell_list:
-                    if cell.position == next_cell:
-                        monster.cell = cell
+                    if loc in monsters_pos_list:
                         break
 
-                monster.cell.in_monster()
-                monster.monster_control(monster.cell.position)
-
-                if monster_old_cell.food_here():
-                    temp_food = ag.Food(self, monster_old_cell.position, monster_old_cell)
-                    temp_food.food_display()
-
-            # Monsters catch Pacman
-            for monster in monsters:
-                if pacman.cell.position == monster.cell.position:
+                # Go to goal (if possible)
+                if go_home != 1:
                     pygame.time.delay(200)
                     self.stage = s_display_f_ove
+                    print("Algorithm run time: ", self.time_algorithm)
+                else:
+                    self.stage = s_display_home
+                    print("Algorithm run time: ", self.time_algorithm)
+            else:
+                self.stage = s_display_f_ove
+                print("Algorithm run time: ", self.time_algorithm)
+
+    def pacman_lv2_ucs(self):
+        graph_map, pacman_pos, food_pos, monsters_pos_list = readmap.map_level2(
+            s_map_txt_path[self.level - 1][self.map_index], True)
+
+        self.time_algorithm = 0
+        self.time_play = 0
+
+        start = timeit.default_timer()
+        # Run UCS
+        pathway = bdu.ucs(graph_map, pacman_pos, food_pos)
+        #
+        self.time_algorithm = timeit.default_timer() - start
+
+        # Call Pacman
+        pacman = ag.Pacman(self, pacman_pos)
+        pacman.pacman_call()
+        # Call Food
+        food = ag.Food(self, food_pos)
+        food.food_display()
+        # Call Monster
+        monsters = [ag.Monster(self, pos) for pos in monsters_pos_list]
+        for mons in monsters:
+            mons.monster_call()
+
+        start = timeit.default_timer()
+        if pathway is not None:
+            # Set pathway, score(0)
+            goal = pathway[-1]
+            pathway_togoal = pathway[1:-1]
+            self.pacman_scoring(0)
+            pygame.time.delay(500)
+
+            # Go
+            for loc in pathway_togoal:
+                pacman.pacman_control(loc)
+                self.pacman_scoring(s_score_move)
+                pygame.time.delay(s_time_delay // self.speed)
+                # Detect event during playing game
+                if self.play_get_action():
+                    go_home = 1
+                    break
+                else:
+                    go_home = 0
+
+            # Go to goal (if not pressed go home button)
+            if go_home != 1:
+                food.food_disappear()
+                pacman.pacman_control(goal)
+                self.pacman_scoring(s_score_gift)
+                pygame.time.delay(2000)
+                self.time_play = timeit.default_timer() - start
+                self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
+            else:
+                self.stage = s_display_home
+                print("Algorithm run time: ", self.time_algorithm)
+
+        # No possible pathway exists with monster is considered as wall. So, just go and die X_X, 100% game over
+        else:
+            # Build again without fake wall
+            graph_map, pacman_pos, food_pos, monsters_pos_list = readmap.map_level2(
+                s_map_txt_path[self.level - 1][self.map_index], False)
+            start = timeit.default_timer()
+            # Run UCS
+            pathway = bdu.ucs(graph_map, pacman_pos, food_pos)
+            self.time_algorithm = timeit.default_timer() - start
+            #
+            if pathway is not None:
+                # Set pathway, score(0)
+                goal = pathway[-1]
+                pathway_togoal = pathway[1:-1]
+                self.pacman_scoring(0)
+                pygame.time.delay(500)
+
+                # Go
+                for loc in pathway_togoal:
+                    pacman.pacman_control(loc)
+                    self.pacman_scoring(s_score_move)
+                    pygame.time.delay(s_time_delay // self.speed)
+                    # Detect event during playing game
+                    if self.play_get_action():
+                        go_home = 1
+                        break
+                    else:
+                        go_home = 0
+
+                    if loc in monsters_pos_list:
+                        break
+
+                # Go to goal (if possible)
+                if go_home != 1:
+                    pygame.time.delay(200)
+                    self.stage = s_display_f_ove
+                    print("Algorithm run time: ", self.time_algorithm)
+                else:
+                    self.stage = s_display_home
+                    print("Algorithm run time: ", self.time_algorithm)
+            else:
+                self.stage = s_display_f_ove
+                print("Algorithm run time: ", self.time_algorithm)
+
+    # Level 3-----------------------------------------------------------------------------------------------------------
+    def pacman_lv3(self):
+        graph_map, pacman_pos, foods_pos, monster_list = readmap.map_level3(s_map_txt_path[self.level - 1][self.map_index])
+        count = 0  # Number of points need to get
+
+        self.time_play = 0
+        self.time_algorithm = 0
+
+        # Call Pacman
+        pacman_pos_draw = [pacman_pos[1], pacman_pos[0]]
+        pacman = ag.Pacman(self, pacman_pos_draw)
+        pacman.pacman_call()
+        # Call Food
+        for foods_pos_t in foods_pos:
+            foods_pos_draw_t = [foods_pos_t[1], foods_pos_t[0]]
+            food = ag.Food(self, foods_pos_draw_t)
+            food.food_display()
+        # Call Monster
+        monsters = [ag.Monster(self, [pos[1], pos[0]]) for pos in list(monster_list.keys())]
+        for mons in monsters:
+            mons.monster_call()
+
+        pre_pos = None
+        time_visits = {}
+        for key in list(graph_map.keys()):
+            time_visits[key] = 0
+        index = 0
+        parity_index_monster = 0  # to keep monster in this 5 cells
+
+        # Preprocessing
+        # Position of monsters
+        old_pos = []
+        for name in list(monster_list.keys()):
+            old_pos.append(name)
+
+        new_pos = old_pos.copy()
+        keys_monster = list(monster_list.keys())
+
+        # Heuristics
+        heuristic_call = {}
+        start = timeit.default_timer()
+        for pos in graph_map[pacman_pos]:
+            heuristic_call[pos] = ls.heuristic_lv3_2around(pacman_pos, graph_map, pos, foods_pos, old_pos)
+        heuristic_call = dict(sorted(heuristic_call.items(), key=lambda item: item[1], reverse=True))
+        self.time_algorithm = timeit.default_timer() - start
+        catch = 0
+        go_home = 0
+        while True:
+            # Display pacman
+            new_pacman_pos = list(heuristic_call.keys())[0]
+            if new_pacman_pos in foods_pos:
+                count += 1
+                food = ag.Food(self, (new_pacman_pos[1], new_pacman_pos[0]))
+                food.food_disappear()
+                self.pacman_scoring(s_score_gift)
+                foods_pos.remove(new_pacman_pos)
+
+            if len(foods_pos) == 0:
+                self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
+                break
+
+            pre_pos = pacman_pos
+            pacman_pos = new_pacman_pos
+            pacman.pacman_control([pacman_pos[1], pacman_pos[0]])
+            self.pacman_scoring(s_score_move)
+
+            for pos in new_pos:
+                if (pacman.co_or_pos[1], pacman.co_or_pos[0]) == pos:
                     catch = 1
                     break
-            if catch:
+
+            parity_index_monster += 1
+            backup_old_pos = old_pos.copy()
+
+            # for element in list(monster_list.keys()):
+            for i in range(len(monster_list)):
+                element = keys_monster[i]
+                if (parity_index_monster % 2 == 1):
+                    old_pos[i] = element
+                    size = len(monster_list[element])
+                    num = random.randint(0, size - 1)
+                    new_pos[i] = (monster_list[element][num][0], monster_list[element][num][1])
+
+                    if ((old_pos[i][0], old_pos[i][1]) in foods_pos):
+                        foods_pos_draw_t = [old_pos[i][1], old_pos[i][0]]
+                        food = ag.Food(self, foods_pos_draw_t)
+                        food.food_display()
+
+                    monster = ag.Monster(self, (old_pos[i][1], old_pos[i][0]))
+                    monster.monster_control([new_pos[i][1], new_pos[i][0]])
+
+                    if monster.co_or_pos == pacman.co_or_pos:
+                        catch = 1
+                        break
+
+                    old_pos[i] = new_pos[i]
+                else:
+                    if ((old_pos[i][0], old_pos[i][1]) in foods_pos):
+                        foods_pos_draw_t = [old_pos[i][1], old_pos[i][0]]
+                        food = ag.Food(self, foods_pos_draw_t)
+                        food.food_display()
+
+                    new_pos[i] = element
+                    monster = ag.Monster(self, (old_pos[i][1], old_pos[i][0]))
+                    monster.monster_control([new_pos[i][1], new_pos[i][0]])
+
+                    if monster.co_or_pos == pacman.co_or_pos:
+                        catch = 1
+                        break
+
+                    old_pos[i] = new_pos[i]
+
+            if catch == 1:
+                self.stage = s_display_f_ove
                 break
 
-            # Pacman win
-            if len(foods) == 0:
-                pygame.time.delay(200)
-                self.stage = s_display_f_vic
-                go_home = 0
-                break
+            # Calculate heuristic for next move
+            heuristic_call = {}
+            start = timeit.default_timer()
+            for pos in graph_map[pacman_pos]:
+                if pos == pre_pos:
+                    time_visits[pos] += 2
+                else:
+                    time_visits[pos] += 1
+                heuristic_call[pos] = (-1) * time_visits[pos] + ls.heuristic_lv3_2around(pacman_pos, graph_map, pos, foods_pos, old_pos)
 
-            pygame.time.delay(250 // self.speed)
+            heuristic_call = dict(sorted(heuristic_call.items(), key=lambda item: item[1], reverse=True))
+            self.time_algorithm += (timeit.default_timer() - start)
+            backup_heuristic = heuristic_call
 
-            # Game play action
+            # Detect event during playing game
             if self.play_get_action():
                 go_home = 1
                 break
+            else:
+                go_home = 0
 
-        if go_home:
+            pygame.time.delay(s_time_delay // self.speed)
+
+        if catch == 1:
+            self.stage = s_display_f_ove
+            print("Algorithm run time: ", self.time_algorithm)
+
+        if go_home == 1:
             self.stage = s_display_home
+            print("Algorithm run time: ", self.time_algorithm)
+
+    # Level 4-----------------------------------------------------------------------------------------------------------
+    def pacman_lv4(self):
+        graph_map, pacman_pos, foods_pos, monster_list = readmap.map_level4(
+            s_map_txt_path[self.level - 1][self.map_index])
+        # Call Pacman
+        pacman_pos_draw = [pacman_pos[1], pacman_pos[0]]
+        pacman = ag.Pacman(self, pacman_pos_draw)
+        pacman.pacman_call()
+        # Call Food
+        for foods_pos_t in foods_pos:
+            foods_pos_draw_t = [foods_pos_t[1], foods_pos_t[0]]
+            food = ag.Food(self, foods_pos_draw_t)
+            food.food_display()
+        # Call Monster
+        monsters = [ag.Monster(self, [pos[1], pos[0]]) for pos in list(monster_list.keys())]
+        for mons in monsters:
+            mons.monster_call()
+
+        self.time_play = 0
+        self.time_algorithm = 0
+
+        # Declare some temp
+        keys_monster = list(monster_list.keys())
+        point = 0
+        time_visits = {}
+        pre_pos = (-1, -1)
+        game_state = ab.GameState(pacman_pos, foods_pos, keys_monster, point, time_visits, pre_pos)
+
+        for key in list(graph_map.keys()):
+            game_state.time_visits[key] = 0
+
+        best_move = None
+        best_score = float('-inf')
+        depth = 16
+        go_home = 0
+        catch = 0
+        while True:
+            pygame.event.pump()
+            if len(foods_pos) == 0:
+                self.stage = s_display_f_vic
+                break
+
+            #Pacman
+            start = timeit.default_timer()
+            eval, best_move = ab.alpha_beta(graph_map, game_state, depth, 1, -inf, inf)
+            self.time_algorithm += timeit.default_timer() - start
+            game_state.pre_pos = game_state.pacman_pos
+            if best_move in foods_pos:
+                food = ag.Food(self, (best_move[1], best_move[0]))
+                self.pacman_scoring(s_score_gift)
+                food.food_disappear()
+                foods_pos.remove(best_move)
+            game_state.pacman_pos = best_move
+            pacman_pos_draw = [best_move[1], best_move[0]]
+            self.pacman_scoring(s_score_move)
+            pacman.pacman_control(pacman_pos_draw)
+            game_state.time_visits[best_move] += 1
+
+            for pos in game_state.monsters_pos:
+                if pacman.co_or_pos == (pos[0], pos[1]):
+                    catch = 1
+                    self.stage = s_display_f_ove
+                    break
+
+            # Monster
+            start = timeit.default_timer()
+            best_move_monster = ab.get_moves(graph_map, game_state, 0).monsters_pos
+            self.time_algorithm += timeit.default_timer() - start
+            random_move_monster = game_state.get_monster_move(graph_map)
+            for j in range(len(game_state.monsters_pos)):
+                k = random.randint(0, 1)
+                if k == 0:
+                    monster = ag.Monster(self, (game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]))
+                    monster.monster_disappear()
+
+                    if (game_state.monsters_pos[j][0], game_state.monsters_pos[j][1]) in foods_pos:
+                        foods_pos_draw_t = [game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]]
+                        food = ag.Food(self, foods_pos_draw_t)
+                        food.food_display()
+
+                    game_state.monsters_pos[j] = best_move_monster[j]
+                    monster = ag.Monster(self, (game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]))
+                    monster.monster_control([game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]])
+
+                    if monster.co_or_pos == pacman.co_or_pos:
+                        catch = 1
+                        self.stage = s_display_f_ove
+                        break
+                else:
+                    monster = ag.Monster(self, (game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]))
+                    monster.monster_disappear()
+
+                    if (game_state.monsters_pos[j][0], game_state.monsters_pos[j][1]) in foods_pos:
+                        foods_pos_draw_t = [game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]]
+                        food = ag.Food(self, foods_pos_draw_t)
+                        food.food_display()
+
+                    game_state.monsters_pos[j] = random_move_monster[j]
+                    monster = ag.Monster(self, (game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]))
+                    monster.monster_control([game_state.monsters_pos[j][1], game_state.monsters_pos[j][0]])
+
+                    if monster.co_or_pos == pacman.co_or_pos:
+                        catch = 1
+                        self.stage = s_display_f_ove
+                        break
+
+            if catch == 1:
+                print("Algorithm run time: ", self.time_algorithm)
+                break
+
+            # Detect event during playing game
+            if self.play_get_action():
+                go_home = 1
+                break
+            else:
+                go_home = 0
+            if len(foods_pos) == 0:
+                self.stage = s_display_f_vic
+                print("Algorithm run time: ", self.time_algorithm)
+                break
+            pygame.time.delay(s_time_delay // self.speed)
+
+        if go_home == 1:
+            self.stage = s_display_home
+            print("Algorithm run time: ", self.time_algorithm)
 
     #Scoring------------------------------------------------------------------------------------------------------------
     def pacman_scoring(self, score):
@@ -768,7 +1352,6 @@ class pacman_game:
             self.screen.blit(text_score, s_pos_scorevalue)
             pygame.display.update(s_pos_scorevalue)
 
-
     #FINISH ------------------------------------------------------------------------------------------------------------
     def game_victory_screen(self):
         self.screen.fill(s_color_black)
@@ -778,10 +1361,6 @@ class pacman_game:
         text_score, text_rect_score = score_font.render(str(self.score), s_color_while)
         text_rect_score.center = (300, 450)
         self.screen.blit(text_score, text_rect_score)
-        #
-        print(self.time_algorithm)
-        print(self.time_play)
-        #
         pygame.display.update()
 
     def game_victory_action(self):
@@ -804,6 +1383,12 @@ class pacman_game:
     def game_gameover_screen(self):
         self.screen.fill(s_color_black)
         self.screen.blit(self.game_gameover_bg, (0, 0))
+
+        score_font = pygame.freetype.Font(r'Resources/Font/Product_Sans_Regular.otf', 40)
+        text_score, text_rect_score = score_font.render(str(self.score), s_color_while)
+        text_rect_score.center = (300, 450)
+        self.screen.blit(text_score, text_rect_score)
+
         pygame.display.update()
 
     def game_gameover_action(self):

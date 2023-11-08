@@ -13,6 +13,7 @@ s_font_path  = r'./Resources/Font/Product_Sans_Regular.otf'
 s_display_bg = r'./Resources/Game Display/PM-MainMenu.png'
 s_display_ab = r'./Resources/Game Display/PM-About.png'
 s_display_lv = r'./Resources/Game Display/PM-PickLevel.png'
+s_display_al = r'./Resources/Game Display/PM-PickAlgorithm.png'
 s_display_pm = r'./Resources/Game Display/PM-PickMap.png'
 s_display_gp = r'./Resources/Game Display/PM-GameScreen.png'
 s_display_victory  = r'./Resources/Game Display/PM-Victory.png'
@@ -46,7 +47,12 @@ s_display_game  = "Playing"
 s_display_f_vic = "Victory"
 s_display_f_ove = "GameOver"
 
-1
+#Algorithm
+s_algorithm_dfs = 0
+s_algorithm_bfs = 1
+s_algorithm_ucs = 2
+s_algorithm_astart = 3
+
 #Button
 s_button_shade                = r'./Resources/Game Display/Button/Shade.png'
 s_button_shade_mapplay        = r'./Resources/Game Display/Button/Shape_4.png'
@@ -99,6 +105,6 @@ s_food_1 = 35
 s_food_2 = 10
 s_food_3 = 5
 
-s_mons_1 = float("-inf")
-s_mons_2 = float("-inf")
-s_mons_3 = -100
+s_mons_1 = -100
+s_mons_2 = -50
+s_mons_3 = -35
