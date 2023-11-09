@@ -3,7 +3,7 @@
 # Abstract
 HCMUS - Artificial Intelligence Fundamentals.<br />
 Project 01: Using Search Algorithm to control Pacman.<br />
-Team 15, CSC14003, 09/2023, HCMC.<\br>
+Team 15, CSC14003, 09/2023, HCMC.<br />
 ## Our team
 👻 [Nguyen Duc Nam](https://github.com/nguyenducnam03)<br />
 👻 [Nguyn Thi Gai](https://github.com/nguyenthigai1905)<br />
