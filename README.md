@@ -52,7 +52,7 @@ Root<br />
  ┗ map_txt_reading.py<br />
 
 # Released Note:
-
+[report.pdf](https://github.com/baohuyvanba/hcmus_aif_PacmanGame/blob/1e6d957735ff679fa7de85a6cd83501464574664/reports.pdf)
 
 
 
